@@ -1,0 +1,46 @@
+// ==== 这段代码是把嵌套的评论递归提取成不嵌套的 ====
+// 返回 Reply[] allreplies 变量
+
+var replies = j_replies.Select(x=>new Reply(x)).ToArray();
+IEnumerable<Reply> GetAllReplies(IEnumerable<Reply>? replies){
+    var reps = new List<Reply>();
+    if(replies!=null){
+        foreach(var reply in replies){
+            reps.Add(reply);
+            reps.AddRange(GetAllReplies(reply.replies));
+        }
+    }
+    return reps;
+}
+var allreplies = GetAllReplies(replies).ToArray();
+allreplies.Count().Display();
+
+// ==== 这段代码是根据关键词搜索出现该文本的评论 ====
+// == 并输出为 Markdown 文件所能查看的表格 ==
+
+// 输入
+var search = await Kernel.GetInputAsync("输入要查找的评论文本：");
+Console.WriteLine(search);
+
+// 检索
+var filtered = allreplies.Where(x=>x.message.Contains(search));
+var header = "| 时间(+8) | 视频(oid) | 回复(rpid) | 用户 | 赞 | 评论内容 |\n"+
+            "| --- | --- | --- | --- | --- | --- | --- |";
+Console.WriteLine(header);
+var lines = new List<string>();
+foreach(var f in filtered){
+    lines.Add(
+        $"| [{f.time_zh.ToString("yyyy/MM/dd HH:mm")}](bilibili/rpid={f.reply_id}) | "+
+        $"[{oid}](https://www.bilibili.com/video/{oid}) | "+
+        $"[{f.reply_id}](https://www.bilibili.com/video/{oid}/#reply{f.reply_id}) | "+
+        $"[{f.member.username}](https://space.bilibili.com/{f.member_id}) | "+
+        $"{f.like} | "+
+        $"{f.message.Replace("\n","<br/>")} |");
+}
+foreach(var line in lines){Console.WriteLine(line);}
+
+// ==== 这段代码用于显示一个评论中(无序) 评论内容含有特定文本的用户信息 ====
+
+var search_memb = await Kernel.GetInputAsync("输入要查找的人的评论文本：");
+Console.WriteLine(search_memb);
+allreplies.First(x=>x.message.Contains(search_memb)).member.Display();
